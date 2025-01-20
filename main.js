@@ -52,7 +52,7 @@ function draw() {
     let modelView = spaceball.getViewMatrix();
 
     let rotateToPointZero = m4.axisRotation([0.707, 0.707, 0], 0.7);
-    let translateToPointZero = m4.translation(0, 0,-40);
+    let translateToPointZero = m4.translation(0, 0, -40);
 
     let matAccum0 = m4.multiply(rotateToPointZero, modelView);
     let matAccum1 = m4.multiply(translateToPointZero, matAccum0);
@@ -60,9 +60,19 @@ function draw() {
     let modelViewProjection = m4.multiply(projection, matAccum1);
     gl.uniformMatrix4fv(shProgram.iModelViewProjectionMatrix, false, modelViewProjection);
 
+    // Рендер поверхні
     gl.uniform4fv(shProgram.iColor, [0.8, 0.4, 0.2, 1]);
     surface.Draw();
+
+    // Рендер u-лінії (червона)
+    gl.uniform4fv(shProgram.iColor, [1.0, 0.0, 0.0, 1.0]);
+    uDirectionLine.Draw();
+
+    // Рендер v-лінії (синя)
+    gl.uniform4fv(shProgram.iColor, [0.0, 0.0, 1.0, 1.0]);
+    vDirectionLine.Draw();
 }
+
 
 // Generate Richmond's Minimal Surface data
 function CreateSurfaceData() {
@@ -107,10 +117,30 @@ function CreateSurfaceData() {
     return vertexList;
 }
 
+function CreateDirectionLines() {
+    const arrowVertices = {
+        u: [], // Вершини для напряму u
+        v: []  // Вершини для напряму v
+    };
+    const scale = 10.0; // Масштаб довжини стрілки
 
+    // Початкова точка на поверхні
+    const x = 0;
+    const y = 0;
+    const z = 0;
 
+    // Додати стрілку для напряму u (червона)
+    arrowVertices.u.push(x, y, z, x + scale, y, z);
 
-// Initialize WebGL
+    // Додати стрілку для напряму v (синя)
+    arrowVertices.v.push(x, y, z, x, y + scale, z);
+
+    return arrowVertices;
+}
+
+let uDirectionLine;
+let vDirectionLine;
+
 function initGL() {
     let prog = createProgram(gl, vertexShaderSource, fragmentShaderSource);
 
@@ -124,8 +154,18 @@ function initGL() {
     surface = new Model('Surface');
     surface.BufferData(CreateSurfaceData());
 
+    const directionLines = CreateDirectionLines();
+
+    uDirectionLine = new Model('uDirectionLine');
+    uDirectionLine.BufferData(directionLines.u);
+
+    vDirectionLine = new Model('vDirectionLine');
+    vDirectionLine.BufferData(directionLines.v);
+
     gl.enable(gl.DEPTH_TEST);
 }
+
+
 
 // Create shader program
 function createProgram(gl, vShader, fShader) {
